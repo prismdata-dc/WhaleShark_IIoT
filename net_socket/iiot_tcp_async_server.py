@@ -91,16 +91,19 @@ def get_fac_inf(redis_con):
 
 def config_fac_msg(equipment_id, fac_daq, modbus_udp, redis_fac_info):
     sensor_code = modbus_udp['meta']['sensor_cd']
-    sensor_desc = redis_fac_info[equipment_id][sensor_code]
-    sensor_value = modbus_udp['meta']['sensor_value']
-    decimal_point = modbus_udp['meta']['decimal_point']
-    pv = float(sensor_value)  # * math.pow(10, float(decimal_point))
-    decimal_point = math.pow(10, float(decimal_point))
-    fac_daq[equipment_id]['pub_time'] = modbus_udp['meta']['pub_time']
-    fac_daq[equipment_id]['ms_time'] = modbus_udp['meta']['ms_time']
-    fac_daq[equipment_id][sensor_desc] = pv / decimal_point
-    fac_msg = json.dumps({equipment_id: fac_daq[equipment_id]})
-    return fac_msg
+    if sensor_code in redis_fac_info[equipment_id].keys():
+        sensor_desc = redis_fac_info[equipment_id][sensor_code]
+        sensor_value = modbus_udp['meta']['sensor_value']
+        decimal_point = modbus_udp['meta']['decimal_point']
+        pv = float(sensor_value)  # * math.pow(10, float(decimal_point))
+        decimal_point = math.pow(10, float(decimal_point))
+        fac_daq[equipment_id]['pub_time'] = modbus_udp['meta']['pub_time']
+        fac_daq[equipment_id]['ms_time'] = modbus_udp['meta']['ms_time']
+        fac_daq[equipment_id][sensor_desc] = pv / decimal_point
+        fac_msg = json.dumps({equipment_id: fac_daq[equipment_id]})
+        return 'success', fac_msg
+    else:
+        return 'code_er', ''
 
 
 class AsyncServer:
@@ -249,19 +252,23 @@ class AsyncServer:
                                 redis_fac_info = json.loads(self.redis_mgr.get('facilities_info'))
                                 if equipment_id in redis_fac_info.keys():
                                     logging.debug('config factory message')
-                                    fac_msg = config_fac_msg(equipment_id, fac_daq, modbus_udp, redis_fac_info)
-                                    
-                                    rabbit_channel, rtn_json = self.publish_facility_msg(mqtt_con=rabbit_channel,
-                                                                                         exchange_name='facility',
-                                                                                         routing_key=equipment_id,
-                                                                                         json_body=fac_msg)
-                                    if rtn_json == json.loads(fac_msg):
-                                        logging.debug(
-                                            'mq body:' + str(json.dumps({equipment_id: fac_daq[equipment_id]})))
+                                    status, fac_msg = config_fac_msg(equipment_id, fac_daq, modbus_udp, redis_fac_info)
+                                    if status == 'success':
+                                        rabbit_channel, rtn_json = self.publish_facility_msg(mqtt_con=rabbit_channel,
+                                                                                             exchange_name='facility',
+                                                                                             routing_key=equipment_id,
+                                                                                             json_body=fac_msg)
+                                        if rtn_json == json.loads(fac_msg):
+                                            logging.debug(
+                                                'mq body:' + str(json.dumps({equipment_id: fac_daq[equipment_id]})))
+                                        else:
+                                            logging.exception("MQTT Publish Excetion:" + str(rtn_json))
+                                            raise NameError('MQTT Publish exception')
                                     else:
-                                        logging.exception("MQTT Publish Excetion:" + str(rtn_json))
-                                        raise NameError('MQTT Publish exception')
-                                
+                                        acq_message = status + packet + 'is not exist sensor key\r\n'
+                                        logging.debug(acq_message)
+                                        client.sendall(acq_message.encode())
+                                        continue
                                 else:
                                     acq_message = status + packet + 'is not exist equipment_id key\r\n'
                                     logging.debug(acq_message)

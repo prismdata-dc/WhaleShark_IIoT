@@ -38,7 +38,7 @@ if __name__ == '__main__':
                                     'TS_VOLT1_(RT)_1', 'TS_VOLT1_(ST)_1'], axis=1)
     Emulation_Data.columns.to_list()
     Emulation_Data_json = Emulation_Data.to_dict(orient='records')
-    column_list = ['TS_AMP1_(R)', 'TS_AMP1_(S)', 'TS_AMP1_(T)', 'INNER_PRESS', 'PUMP_PRESS']
+    column_list = ['TS_AMP1_(R)']#, 'TS_AMP1_(S)', 'TS_AMP1_(T)', 'INNER_PRESS', 'PUMP_PRESS']
     
     sensor_id_map = {'TS_VOLT1_(RS)': 1,
                      'TS_VOLT1_(ST)': 2,
@@ -57,11 +57,11 @@ if __name__ == '__main__':
     # facility_id 설비명 / 설비 ID, sensor_code : 센서에 대한 설명(iiot server의 facilities_dict 참조), pv : 현재 센서 값
     for i, emulation_data in enumerate(Emulation_Data_json):
         for column in column_list:
-            print(i, column, 'code{:04d}'.format(sensor_id_map[column]), 'PV', int(emulation_data[column] / 100))
+            # print(i, column, 'code{:04d}'.format(sensor_id_map[column]), 'PV', int(emulation_data[column] / 100))
             packet = make_packet(facility_id='TS0001', sensor_code='{:04d}'.format(sensor_id_map[column]),
                                  pv=int(emulation_data[column] / 1000))
             byte_tuple = convert(list(packet))
-            print(byte_tuple)
+            print('SEND', byte_tuple)
             client_socket.send(packet.encode())
             time.sleep(1)
             data = client_socket.recv(1024)
