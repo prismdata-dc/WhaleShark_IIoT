@@ -130,24 +130,6 @@ class Agent:
         except Exception as exp:
             print(str(exp))
 
-    def config_facility_desc(self, redis_con):
-        facilities_dict = redis_con.get('facilities_info')
-        if facilities_dict is None:
-            facilities_dict = {'TS0001': {
-                '0001': 'TS_VOLT1_(RS)',
-                '0002': 'TS_VOLT1_(ST)',
-                '0003': 'TS_VOLT1_(RT)',
-                '0004': 'TS_AMP1_(R)',
-                '0005': 'TS_AMP1_(S)',
-                '0006': 'TS_AMP1_(T)',
-                '0007': 'INNER_PRESS',
-                '0008': 'PUMP_PRESS',
-                '0009': 'TEMPERATURE1(PV)',
-                '0010': 'TEMPERATURE1(SV)',
-                '0011': 'OVER_TEMP'}
-            }
-            redis_con.set('facilities_info', json.dumps(facilities_dict))
-            
     def resource_config(self):
         self.influxdb_mgr = self.get_influxdb(host=self.influx_host, port=self.influx_port, name=self.influx_id, pwd=self.influx_pwd, db=self.influx_db)
         if self.influxdb_mgr is None:
@@ -163,7 +145,6 @@ class Agent:
         return self.influxdb_mgr
     
     def syncmessage(self):
-        self.config_facility_desc(self.redis_mgr)
         facilities_dict = json.loads(self.redis_mgr.get('facilities_info'))
         for facility_id in facilities_dict.keys():
             result = self.mq_channel.queue_declare(queue=facility_id, exclusive=True)
