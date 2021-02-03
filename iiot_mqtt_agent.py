@@ -6,7 +6,7 @@ import sys
 import redis
 from influxdb import InfluxDBClient
 import time
-import mongo_manager
+# import mongo_manager
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
                     stream=sys.stdout, level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
@@ -29,7 +29,7 @@ class Agent:
             self.influx_pwd = config_obj['iiot_server']['influxdb']['pwd']
             self.influx_db = config_obj['iiot_server']['influxdb']['db']
 
-        self.mongo_mgr = mongo_manager.MongoMgr()
+        # self.mongo_mgr = mongo_manager.MongoMgr()
     
     def connect_redis(self, host, port):
         """
